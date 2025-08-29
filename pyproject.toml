@@ -1,0 +1,164 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastguard"
+version = "0.1.0"
+description = "Совместимая с FastAPI библиотека предоставляющая middlewares для аутентификации"
+requires-python = ">=3.13"
+dependencies = [
+    "aiohttp>=3.12.15",
+    "anyio>=4.10.0",
+    "build>=1.3.0",
+    "fastapi[all]>=0.116.1",
+    "mypy>=1.17.1",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
+    "pytest-tornasync>=0.6.0.post2",
+    "pytest-trio>=0.8.0",
+    "pytest-twisted>=1.14.3",
+    "ruff>=0.12.10",
+    "setuptools>=80.9.0",
+    "twine>=6.1.0",
+    "twisted>=25.5.0",
+    "wheel>=0.45.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/Andr171p/fastguard.git"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+packages = ["fastguard"]
+
+[tool.setuptools.package-data]
+fastguard = ["*.py", "*.pyi", "*.txt", "*.json", "*.yaml"]
+
+[tool.ruff]
+line-length = 99
+preview = true
+exclude = [
+    "migrations",
+    "migration",
+    "src/migrations",
+    "alembic.ini",
+    "**/__pycache__",
+    "**/.mypy_cache",
+    "**/.ruff_cache",
+    "**/.venv"
+]
+
+[tool.ruff.lint]
+select = [
+    "F",
+    "E",
+    "W",
+    "C90",
+    "I",
+    "N",
+    "UP",
+    "YTT",
+    "ASYNC",
+    "S",
+    "BLE",
+    "B",
+    "A",
+    "COM",
+    "C4",
+    "DTZ",
+    "T10",
+    "EXE",
+    "ISC",
+    "ICN",
+    "G",
+    "INP",
+    "PIE",
+    "T20",
+    "PYI",
+    "PT",
+    "Q",
+    "RSE",
+    "RET",
+    "SLF",
+    "SLOT",
+    "SIM",
+    "TID",
+    "INT",
+    "ARG",
+    "TD",
+    "FIX",
+    "ERA",
+    "PD",
+    "PGH",
+    "PL",
+    "TRY",
+    "FLY",
+    "NPY",
+    "AIR",
+    "PERF",
+    "FURB",
+    "LOG",
+    "RUF",
+]
+ignore = [
+    "S105",
+    "S101",
+    "B008",
+    "TRY201",
+    "PLW3201",
+    "N805",
+    "PTH",
+    "COM812",
+    "ISC001",
+    "TRY003",
+    "PT013",
+    "TID252",
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    "ASYNC109",
+]
+
+[tool.ruff.lint.isort]
+section-order = [
+    "future",
+    "typings",
+    "standard-library",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
+
+[tool.ruff.lint.isort.sections]
+"typings" = ['typing']
+
+[tool.ruff.lint.pylint]
+max-args = 15
+max-returns = 10
+max-branches = 30
+
+# -- MyPy --
+[tool.mypy]
+ignore_missing_imports = true
+exclude = [
+    "src/migration",
+    "src/migrations",
+    "__samples__",
+    ".venv"
+]
+
+# -- Vulture --
+[tool.vulture]
+exclude = [
+    ".vscode/",
+    "__samples__/",
+    "tests",
+    ".venv"
+]
+ignore_names = [
+    "post",
+    "put",
+    "delete",
+    "head"
+]
