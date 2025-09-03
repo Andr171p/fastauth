@@ -1,12 +1,3 @@
-# FastAuth - библиотека для интеграции с SSO сервисом.
-
-## Установка
-
-```shell
-pip install "git+https://github.com/Andr171p/fastauth.git"
-```
-
-```python
 from fastapi import FastAPI
 
 from fastauth import OAuthMiddleware, RequiredRolesMiddleware, AuthMiddleware, CurrentUser
@@ -34,7 +25,7 @@ app.add_middleware(
     AuthMiddleware,
     base_url="https://sso.example.ru/api/v1",
     realm="some-realm",
-    public_endpoints=["/home", "/courses"],
+    public_endpoints=["/home", "/"],
 )
 
 REQUIRED_ROLES_ENDPOINTS: dict[str, dict[str, list[str]]] = {
@@ -51,5 +42,3 @@ app.add_middleware(
     RequiredRolesMiddleware,
     required_roles_endpoints=REQUIRED_ROLES_ENDPOINTS,
 )
-
-```
