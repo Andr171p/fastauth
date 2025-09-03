@@ -1,5 +1,11 @@
 # FastGuard - библиотека для интеграции с SSO сервисом.
 
+## Установка
+
+```shell
+pip install "git+https://github.com/Andr171p/fastauth.git"
+```
+
 ```python
 from fastapi import FastAPI
 
@@ -29,7 +35,7 @@ REQUIRED_ROLES_ENDPOINTS: dict[str, dict[str, list[str]]] = {
     },
 }
 
-app.add_middleware(RoleRequiredMiddleware(
+app.add_middleware(RequiredRolesMiddleware(
     required_roles_endpoints=REQUIRED_ROLES_ENDPOINTS
 ))
 
