@@ -89,9 +89,11 @@ class UserHeaders(BaseModel):
     x_user_status: UserStatus
     x_user_roles: list[Role]
 
+    model_config = ConfigDict(from_attributes=True)
+
     @classmethod
     def from_request(cls, request: Request) -> Self:
-        return cls.model_validate(request.scope["headers"])
+        return cls.model_validate(request.headers)
 
     @field_validator("x_user_roles", mode="before")
     def validate_roles(cls, roles: str) -> list[Role]:
