@@ -91,7 +91,7 @@ class UserHeaders(BaseModel):
 
     @classmethod
     def from_request(cls, request: Request) -> Self:
-        return cls.model_validate(request.headers)
+        return cls.model_validate(request.scope["headers"])
 
     @field_validator("x_user_roles", mode="before")
     def validate_roles(cls, roles: str) -> list[Role]:
