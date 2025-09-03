@@ -93,7 +93,12 @@ class UserHeaders(BaseModel):
 
     @classmethod
     def from_request(cls, request: Request) -> Self:
-        return cls.model_validate(request.headers)
+        return cls.model_validate({
+            "x_user_id": request.headers.get("X-User-Id"),
+            "x_user_email": request.headers.get("X-User-Email"),
+            "x_user_status": request.headers.get("X-User-Status"),
+            "x_user_roles": request.headers.get("X-User-Roles"),
+        })
 
     @field_validator("x_user_roles", mode="before")
     def validate_roles(cls, roles: str) -> list[Role]:
