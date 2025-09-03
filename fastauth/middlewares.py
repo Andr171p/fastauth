@@ -1,3 +1,5 @@
+import logging
+
 import aiohttp
 from fastapi import HTTPException, status
 from starlette.datastructures import MutableHeaders
@@ -8,6 +10,8 @@ from starlette.types import ASGIApp
 
 from .constants import DOCS_ENDPOINTS
 from .schemas import ClientClaims, TokenType, UserClaims
+
+logger = logging.getLogger("fastauth")
 
 
 class OAuthMiddleware(BaseHTTPMiddleware):
@@ -30,8 +34,9 @@ class OAuthMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         header = request.headers.get("Client authorization")
         if not header or not header.startswith("Bearer "):
+            logger.debug("Invalid authorization header: %s", header)
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid Bearer Token"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid bearer token"
             )
         token = header.replace("Bearer ", "")
         claims = await self._introspect_token(token)
@@ -39,28 +44,33 @@ class OAuthMiddleware(BaseHTTPMiddleware):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail=claims.cause
             )
-        augmented_request = self._augment_request(request, claims)
-        return await call_next(augmented_request)
+        request_with_claims = self._inject_claims(request, claims)
+        logger.debug("Client %s authentication successfully!", claims.sub)
+        return await call_next(request_with_claims)
 
     async def _introspect_token(self, token: str) -> ClientClaims:
         async with aiohttp.ClientSession(base_url=self.base_url) as session, session.post(
-                url=f"/{self.realm}/oauth/introspect",
+                url=f"{self.realm}/oauth/introspect",
                 headers={"Content-Type": "application/json"},
                 json={"token": token},
         ) as response:
             data = await response.json()
             if response.status == status.HTTP_400_BAD_REQUEST:
+                detail = data.get("detail", "Unknown error")
+                logger.debug("Request failed: %s", detail)
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, detail=data["detail"]
+                    status_code=status.HTTP_400_BAD_REQUEST, detail=detail
                 )
             if response.status == status.HTTP_401_UNAUTHORIZED:
+                detail = data.get("detail", "Unknown error")
+                logger.debug("Unauthorized request: %s", detail)
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, detail=data["detail"]
+                    status_code=status.HTTP_401_UNAUTHORIZED, detail=detail
                 )
             return ClientClaims.model_validate(data)
 
     @staticmethod
-    def _augment_request(request: Request, claims: ClientClaims) -> Request:
+    def _inject_claims(request: Request, claims: ClientClaims) -> Request:
         """Дополняет запрос новыми заголовками с информацией о клиенте."""
         headers = MutableHeaders(scope=request.scope)
         headers["X-Client-Id"] = claims.sub
@@ -95,6 +105,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if request.url.path in DOCS_ENDPOINTS or request.url.path in self.public_endpoints:
+            logger.debug(
+                "Skipping authentication for public endpoint: %s", request.url.path
+            )
             return await call_next(request)
         session_id = request.cookies.get("session_id")
         if session_id is None:
@@ -103,6 +116,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             )
         header = request.headers.get("Authorization")
         if not header or not header.startswith("Bearer "):
+            logger.debug("Invalid authorization header: %s", header)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authorization header"
             )
@@ -113,8 +127,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token type"
             )
-        augmented_request = self._augment_request(request, claims)
-        return await call_next(augmented_request)
+        request_with_claims = self._inject_claims(request, claims)
+        logger.debug("User %s authenticated successfully!", claims.sub)
+        return await call_next(request_with_claims)
 
     async def _introspect_token(self, token: str, cookies: dict[str, str]) -> UserClaims:
         async with aiohttp.ClientSession(base_url=self.base_url) as session, session.post(
@@ -124,15 +139,16 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 cookies=cookies
         ) as response:
             data = await response.json()
-            print(data)
             if response.status == status.HTTP_401_UNAUTHORIZED:
+                detail = data.get("detail", "Unknown error")
+                logger.debug("Unauthorized request: %s", detail)
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, detail=data["detail"]
+                    status_code=status.HTTP_401_UNAUTHORIZED, detail=detail
                 )
             return UserClaims.model_validate(data)
 
     @staticmethod
-    def _augment_request(request: Request, claims: UserClaims) -> Request:
+    def _inject_claims(request: Request, claims: UserClaims) -> Request:
         """Дополняет запрос новыми заголовками с информацией о пользователе."""
         headers = MutableHeaders(scope=request.scope)
         headers["X-User-Id"] = claims.sub
@@ -163,8 +179,12 @@ class RequiredRolesMiddleware(BaseHTTPMiddleware):
             methods_roles = self.required_roles_endpoints[request.url.path]
             required_roles = methods_roles.get(request.method.lower(), methods_roles.get("*", []))
             if required_roles:
-                requested_roles = request.headers.get("X-User-Roles").split(" ")
+                requested_roles = request.scope["headers"].get("X-User-Roles").split(" ")
                 if not any(required_role in requested_roles for required_role in required_roles):
+                    logger.debug(
+                        "Access denied for user %s, with cause: insufficient roles",
+                        request.scope["headers"].get("X-User-Id", "Unknown"),
+                    )
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
                         detail=f"Not authorized: required roles {required_roles}"
