@@ -1,5 +1,6 @@
 import aiohttp
 from fastapi import HTTPException, status
+from starlette.datastructures import MutableHeaders
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
@@ -61,9 +62,11 @@ class OAuthMiddleware(BaseHTTPMiddleware):
     @staticmethod
     def _augment_request(request: Request, claims: ClientClaims) -> Request:
         """Дополняет запрос новыми заголовками с информацией о клиенте."""
-        request.headers["X-Client-Id"] = claims.sub
-        request.headers["X-Client-Scope"] = claims.scope
-        request.headers["X-Client-Realm"] = claims.realm
+        headers = MutableHeaders(scope=request.scope)
+        headers["X-Client-Id"] = claims.sub
+        headers["X-Client-Scope"] = claims.scope
+        headers["X-Client-Realm"] = claims.realm
+        request.scope = headers.raw
         return request
 
 
@@ -106,6 +109,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         token = header.replace("Bearer ", "")
         claims = await self._introspect_token(token, cookies=request.cookies)
         if claims.token_type != TokenType.ACCESS:
+            print(claims)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token type"
             )
@@ -114,12 +118,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
     async def _introspect_token(self, token: str, cookies: dict[str, str]) -> UserClaims:
         async with aiohttp.ClientSession(base_url=self.base_url) as session, session.post(
-                url=f"/{self.realm}/auth/introspect",
+                url=f"{self.realm}/auth/introspect",
                 headers={"Content-Type": "application/json"},
                 json={"token": token},
                 cookies=cookies
         ) as response:
             data = await response.json()
+            print(data)
             if response.status == status.HTTP_401_UNAUTHORIZED:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED, detail=data["detail"]
@@ -129,15 +134,17 @@ class AuthMiddleware(BaseHTTPMiddleware):
     @staticmethod
     def _augment_request(request: Request, claims: UserClaims) -> Request:
         """Дополняет запрос новыми заголовками с информацией о пользователе."""
-        request.headers["X-User-Id"] = claims.sub
-        request.headers["X-User-Roles"] = " ".join(claims.roles)
-        request.headers["X-User-Realm"] = claims.realm
-        request.headers["X-User-Status"] = claims.status
-        request.headers["X-User-Email"] = claims.email
+        headers = MutableHeaders(scope=request.scope)
+        headers["X-User-Id"] = claims.sub
+        headers["X-User-Roles"] = " ".join(claims.roles)
+        headers["X-User-Realm"] = claims.realm
+        headers["X-User-Status"] = claims.status
+        headers["X-User-Email"] = claims.email
+        request.scope["headers"] = headers.raw
         return request
 
 
-class RoleRequiredMiddleware(BaseHTTPMiddleware):
+class RequiredRolesMiddleware(BaseHTTPMiddleware):
     """Middleware для авторизации на основе глобальных ролей пользователя.
 
     Проверяет наличие необходимых ролей у пользователя для доступа к эндпоинтам.

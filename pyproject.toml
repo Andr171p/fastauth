@@ -30,7 +30,7 @@ Homepage = "https://github.com/Andr171p/fastguard.git"
 
 [tool.setuptools]
 package-dir = {"" = "."}
-packages = ["fastguard"]
+packages = ["fastapi-auth"]
 
 [tool.setuptools.package-data]
 fastguard = ["*.py", "*.pyi", "*.txt", "*.json", "*.yaml"]

@@ -1,12 +1,16 @@
+from typing import Self
+
 from enum import StrEnum
 from uuid import UUID
 
+from fastapi import Request
 from pydantic import (
     BaseModel,
     HttpUrl,
     ConfigDict,
     field_validator,
-    field_serializer
+    field_serializer,
+    EmailStr
 )
 
 
@@ -76,4 +80,19 @@ class UserClaims(Claims):
     def validate_roles(cls, roles: str | list[Role]) -> list[Role]:
         if isinstance(roles, list):
             return roles
+        return [Role(role) for role in roles.split(" ")]
+
+
+class UserHeaders(BaseModel):
+    x_user_id: UUID
+    x_user_email: EmailStr
+    x_user_status: UserStatus
+    x_user_roles: list[Role]
+
+    @classmethod
+    def from_request(cls, request: Request) -> Self:
+        return cls.model_validate(request.headers)
+
+    @field_validator("x_user_roles", mode="before")
+    def validate_roles(cls, roles: str) -> list[Role]:
         return [Role(role) for role in roles.split(" ")]

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from fastguard.middlewares import OAuthMiddleware, RoleRequiredMiddleware, AuthMiddleware
+from fastapi_auth.middlewares import OAuthMiddleware, RoleRequiredMiddleware, AuthMiddleware
 
 app = FastAPI()
 
