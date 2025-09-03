@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from fastapi_auth.middlewares import OAuthMiddleware, RoleRequiredMiddleware, AuthMiddleware
+from fastauth.middlewares import OAuthMiddleware, RequiredRolesMiddleware, AuthMiddleware
 
 app = FastAPI()
 
@@ -26,6 +26,6 @@ REQUIRED_ROLES_ENDPOINTS: dict[str, dict[str, list[str]]] = {
     },
 }
 
-app.add_middleware(RoleRequiredMiddleware(
+app.add_middleware(RequiredRolesMiddleware(
     required_roles_endpoints=REQUIRED_ROLES_ENDPOINTS
 ))

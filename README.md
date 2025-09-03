@@ -3,7 +3,7 @@
 ```python
 from fastapi import FastAPI
 
-from fastapi_auth import OAuthMiddleware, RoleRequiredMiddleware, AuthMiddleware
+from fastauth import OAuthMiddleware, RequiredRolesMiddleware, AuthMiddleware
 
 app = FastAPI()
 
