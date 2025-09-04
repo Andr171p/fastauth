@@ -7,20 +7,35 @@ pip install "git+https://github.com/Andr171p/fastauth.git"
 ```
 
 ```python
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 
-from fastauth import OAuthMiddleware, RequiredRolesMiddleware, AuthMiddleware, CurrentUser
+from fastauth import (
+    OAuthMiddleware, 
+    RequiredRolesMiddleware, 
+    AuthMiddleware, 
+    CurrentUser,
+    require_roles,
+    require_status,
+    UserStatus,
+    UserRole,
+)
 
 app = FastAPI()
 
 
-@app.get("/protected")
+@app.get(
+    path="/protected",
+    dependencies=[
+        Depends(require_roles([UserRole.ADMIN])),
+        Depends(require_status([UserStatus.EMAIL_VERIFIED]))
+    ]
+)
 async def protected(current_user: CurrentUser):
     return {
-        "id": current_user.id,
-        "email": current_user.email,
-        "status": current_user.status,
-        "roles": current_user.roles,
+        "id": current_user.x_user_id,
+        "email": current_user.x_user_email,
+        "status": current_user.x_user_status,
+        "roles": current_user.x_user_roles,
     }
 
 

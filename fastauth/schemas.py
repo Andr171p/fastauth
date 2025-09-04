@@ -19,7 +19,7 @@ class TokenType(StrEnum):
     REFRESH = "refresh"
 
 
-class Role(StrEnum):
+class UserRole(StrEnum):
     """Глобальные роли пользователя в рамках области"""
     SUPERADMIN = "superadmin"
     ADMIN = "admin"
@@ -74,20 +74,20 @@ class UserClaims(Claims):
     email: str | None = None
     status: UserStatus | None = None
     realm: str | None = None
-    roles: list[Role] | None = None
+    roles: list[UserRole] | None = None
 
     @field_validator("roles", mode="before")
-    def validate_roles(cls, roles: str | list[Role]) -> list[Role]:
+    def validate_roles(cls, roles: str | list[UserRole]) -> list[UserRole]:
         if isinstance(roles, list):
             return roles
-        return [Role(role) for role in roles.split(" ")]
+        return [UserRole(role) for role in roles.split(" ")]
 
 
 class UserHeaders(BaseModel):
     x_user_id: UUID
     x_user_email: EmailStr
     x_user_status: UserStatus
-    x_user_roles: list[Role]
+    x_user_roles: list[UserRole]
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -101,5 +101,5 @@ class UserHeaders(BaseModel):
         })
 
     @field_validator("x_user_roles", mode="before")
-    def validate_roles(cls, roles: str) -> list[Role]:
-        return [Role(role) for role in roles.split(" ")]
+    def validate_roles(cls, roles: str) -> list[UserRole]:
+        return [UserRole(role) for role in roles.split(" ")]
